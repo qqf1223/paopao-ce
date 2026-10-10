@@ -8,7 +8,7 @@ services:
       MYSQL_DATABASE: paopao
       MYSQL_USER: paopao
       MYSQL_PASSWORD: paopao
-      MYSQL_RANDOM_ROOT_PASSWORD: yes
+      MYSQL_ROOT_PASSWORD: paopao
     volumes:
       - ./scripts/paopao-mysql.sql:/docker-entrypoint-initdb.d/paopao.sql
       - ./custom/data/mysql/data:/var/lib/mysql
@@ -41,13 +41,10 @@ services:
   #     - paopao-network
 
   redis:
-    image: redis/redis-stack:${REDIS_STACK_TAG:-7.2.0-v6}
+    image: redis:6.0-alpine
     restart: always
     ports:
       - 6379:6379
-      - 8001:8001
-    environment:
-      REDISEARCH_ARGS: "MAXSEARCHRESULTS 5"
     networks:
       - paopao-network
   
@@ -67,7 +64,7 @@ services:
   #     - paopao-network
 
   meili:
-    image: getmeili/meilisearch:${MEILI_TAG:-v1.7}
+    image: getmeili/meilisearch:v1.15.2
     restart: always
     ports:
       - 7700:7700
@@ -124,15 +121,19 @@ services:
   #     - paopao-network
 
   backend:
-    image: bitbus/paopao-ce:${PAOPAOCE_TAG:-0.6-alpha}
+    build:
+      context: .
+      dockerfile: scripts/docker/Dockerfile.backend-builder
+      args:
+        TARGETOS: linux
+        TARGETARCH: arm64
     restart: always
     depends_on:
       - db
       - redis
       - meili
-    # modify below to reflect your custom configure
     volumes:
-      - ./config.yaml.sample:/app/paopao-ce/config.yaml
+      - ./config.yaml:/app/paopao-ce/config.yaml
       - ./custom:/app/paopao-ce/custom
     ports:
       - 8008:8008
